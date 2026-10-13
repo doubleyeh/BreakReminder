@@ -49,7 +49,7 @@ namespace BreakReminder
 
             tray = new WF.NotifyIcon
             {
-                Icon = WD.SystemIcons.Application,
+                Icon = LoadIcon(),
                 ContextMenuStrip = menu,
                 Visible = true,
                 Text = "休息提醒"
@@ -64,6 +64,18 @@ namespace BreakReminder
 
             SystemEvents.SessionSwitch += OnSessionSwitch;
             UpdateTray();
+        }
+
+        static WD.Icon LoadIcon()
+        {
+            try
+            {
+                using (var st = System.Reflection.Assembly.GetExecutingAssembly()
+                    .GetManifestResourceStream("app.ico"))
+                    if (st != null) return new WD.Icon(st);
+            }
+            catch { }
+            return WD.SystemIcons.Application;
         }
 
         void Tick()
