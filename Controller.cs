@@ -18,6 +18,8 @@ namespace BreakReminder
         WF.NotifyIcon tray;
         WF.ToolStripMenuItem pauseItem;
         WF.ToolStripMenuItem autoItem;
+        WF.ToolStripMenuItem miniItem;
+        MiniClock mini;
         DispatcherTimer timer;
         readonly List<OverlayWindow> overlays = new List<OverlayWindow>();
 
@@ -35,6 +37,9 @@ namespace BreakReminder
             pauseItem = new WF.ToolStripMenuItem("暂停", null, (s, e) => TogglePause());
             menu.Items.Add(pauseItem);
             menu.Items.Add("重置计时", null, (s, e) => ResetWork());
+            miniItem = new WF.ToolStripMenuItem("悬浮时间", null, (s, e) => SetMini(!cfg.ShowMini));
+            miniItem.Checked = cfg.ShowMini;
+            menu.Items.Add(miniItem);
             menu.Items.Add("设置...", null, (s, e) => ShowSettings());
             autoItem = new WF.ToolStripMenuItem("开机自启", null, (s, e) => ToggleAutoStart());
             autoItem.Checked = IsAutoStart();
@@ -49,6 +54,9 @@ namespace BreakReminder
                 Visible = true,
                 Text = "休息提醒"
             };
+
+            mini = new MiniClock(() => SetMini(false));
+            mini.Show();
 
             timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             timer.Tick += (s, e) => Tick();
@@ -152,6 +160,23 @@ namespace BreakReminder
                      : paused ? "已暂停"
                      : "距离休息 " + Fmt(remaining);
             tray.Text = t.Length > 63 ? t.Substring(0, 63) : t;
+            UpdateMini();
+        }
+
+        void UpdateMini()
+        {
+            if (mini == null) return;
+            bool visible = cfg.ShowMini && !resting;
+            mini.Visibility = visible ? Visibility.Visible : Visibility.Hidden;
+            if (visible) mini.SetText(paused ? "已暂停" : Fmt(remaining));
+        }
+
+        void SetMini(bool on)
+        {
+            cfg.ShowMini = on;
+            miniItem.Checked = on;
+            cfg.Save();
+            UpdateMini();
         }
 
         static string Fmt(int sec)
@@ -184,6 +209,7 @@ namespace BreakReminder
             SystemEvents.SessionSwitch -= OnSessionSwitch;
             timer.Stop();
             CloseOverlays();
+            mini.Close();
             tray.Visible = false;
             tray.Dispose();
             Application.Current.Shutdown();
